@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../api"
 import { Book } from "../App";
 
 interface EditBookProps {
@@ -32,7 +32,7 @@ export const EditBook: React.FC<EditBookProps> = ({ book, onClose, onBookUpdated
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.put(`http://localhost:5000/api/books/${book.id}`, {
+      const res = await api.put(`books/${book.id}`, {
         ...form,
         cover: form.cover.trim() ? form.cover : DUMMY_COVER,
       });

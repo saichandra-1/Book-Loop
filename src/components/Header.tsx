@@ -8,9 +8,10 @@ interface HeaderProps {
   onPageChange: (page: Page) => void;
   currentUser: UserType | null;
   onLogout: () => void;
+  onShowNotifications: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, currentUser, onLogout }) => {
+export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, currentUser, onLogout, onShowNotifications }) => {
   const navItems = [
     { key: 'home' as Page, label: 'Home', icon: Home },
     { key: 'books' as Page, label: 'Books', icon: BookOpen },

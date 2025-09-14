@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Users, MessageCircle, Clock, Plus, Search, Lock, Globe, Heart } from 'lucide-react';
 import { User ,ReadingCircle} from '../App';
-import axios from 'axios';
+import api from '../api';
 
 
 interface CirclesPageProps {
@@ -37,7 +37,7 @@ export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCi
     if (!currentUser) return;
     console.log("Joining circle:", circleId);
     console.log("Current user:", currentUser);
-    const res= await axios.post(`http://localhost:5000/api/circles/${circleId}/join`, {
+    const res= await api.post(`circles/${circleId}/join`, {
       userId: currentUser.id,
     });
     // if(res.status!==200) return
@@ -59,7 +59,7 @@ export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCi
   const handleLeaveCircle = async (circleId: string) => {
     if (!currentUser) return;
     // Simulate API call
-    const res= await axios.delete(`http://localhost:5000/api/circles/${circleId}/leave`, {
+    const res= await api.delete(`circles/${circleId}/leave`, {
       data: { userId: currentUser.id },
     });
     if(res.status!==200) return
@@ -79,7 +79,7 @@ export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCi
     e.preventDefault();
     setCreating(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/addcircles', {
+      const res = await api.post('addcircles', {
         name: circleName,
         description: circleDesc,
         privacy: circlePrivacy,
@@ -89,7 +89,7 @@ export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCi
       });
       const newCircle = res.data;
       //add user to the circle
-      const userjoin=await axios.post(`http://localhost:5000/api/circles/${newCircle.id}/join`, {
+      const userjoin=await api.post(`circles/${newCircle.id}/join`, {
         userId: currentUser?.id,
       });
       if(userjoin.status!==200) return

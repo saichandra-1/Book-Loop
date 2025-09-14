@@ -8,7 +8,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
 import { EditProfileModal } from './components/EditProfileModal';
 import { AddBook } from './components/AddBook';
-import axios from 'axios';
+import api from './api';
 
 export type Page = 'home' | 'books' | 'circles' | 'profile' | 'recommendations';
 
@@ -108,6 +108,7 @@ function App() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [showAddBook, setShowAddBook] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in (mock check)
@@ -115,7 +116,7 @@ function App() {
     if (savedUser) {
       const userId = JSON.parse(savedUser);
       const userdetails = async() => {
-        const user= await axios.get('http://localhost:5000/api/users/'+userId);
+        const user= await api.get('users/'+userId);
         setCurrentUser({
           id: user.data.id,
           name: user.data.name,
@@ -132,25 +133,25 @@ function App() {
       }
 
       const booksdata = async() => {
-        const books= await axios.get('http://localhost:5000/api/books/');
+        const books= await api.get('books/');
         setBooks(books.data);
       }
       booksdata();
 
       const readingCirclesData = async() => {
-        const circles= await axios.get('http://localhost:5000/api/circles/');
+        const circles= await api.get('circles/');
         setReadingCircles(circles.data);
       }
       readingCirclesData();
 
       const tradesdata = async() => {
-        const trades= await axios.get('http://localhost:5000/api/trades/user/'+userId);
+        const trades= await api.get('trades/user/'+userId);
         setTrades(trades.data);
       }
       tradesdata();
 
       const notificationsdata = async() => {
-        const notifications= await axios.get('http://localhost:5000/api/notifications/');
+        const notifications= await api.get('notifications/');
         setNotifications(notifications.data);
       }
       notificationsdata();
@@ -162,7 +163,7 @@ function App() {
 
   const handleLogin = async(email: string, password: string) => {
     // Mock login - in real app, this would call your backend API
-   const user= await axios.get('http://localhost:5000/api/users/login', { params: { email, password } });
+   const user= await api.get('users/login', { params: { email, password } });
     const exitinguser: User = {
       id: user.data.id,
       name: user.data.name,
@@ -182,7 +183,7 @@ function App() {
   };
 
   const handleSignup = async (name: string, email: string, password: string) => {
-    const user= await axios.post('http://localhost:5000/api/users/signup', { name, email, password });
+    const user= await api.post('users/signup', { name, email, password });
     const newUser: User = {
       id: user.data.id,
       name: user.data.name,
@@ -215,23 +216,20 @@ function App() {
     setShowEditProfile(false);
   };
 
-  if (!isAuthenticated) {
-    return <AuthPage onLogin={handleLogin} onSignup={handleSignup} />;
-  }
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'home':
-        return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} />;
+        return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} setTrades={setTrades} />;
       case 'books':
         return <BooksPage currentUser={currentUser} books={books} />;
       case 'circles':
         return <CirclesPage currentUser={currentUser} readingCircles={readingCircles} />;
       case 'profile':
-        return <ProfilePage currentUser={currentUser} onEditProfile={() => setShowEditProfile(true)} books={books} readingCircles={readingCircles} trades={trades} setShowAddBook={setShowAddBook} setBooks={setBooks} />;
+        return <ProfilePage currentUser={currentUser} onEditProfile={() => setShowEditProfile(true)} books={books} readingCircles={readingCircles} trades={trades} setShowAddBook={setShowAddBook} setBooks={setBooks} setTrades={setTrades} />;
       case 'recommendations':
         return <RecommendationsPage currentUser={currentUser} books={books} readingCircles={readingCircles} />;
       default:
-        return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} />;
+        return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} setTrades={setTrades} />;
     }
   };
 
@@ -242,6 +240,7 @@ function App() {
         onPageChange={setCurrentPage}
         currentUser={currentUser}
         onLogout={handleLogout}
+        onShowNotifications={() => setShowNotifications(true)}
       />
       <main className="pt-16">
         {renderCurrentPage()}
@@ -264,6 +263,30 @@ function App() {
       setShowAddBook(false);
     }}
   />
+)}
+
+{showNotifications && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div className="bg-white rounded-xl p-8 max-w-lg w-full shadow-lg relative">
+      <button
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+        onClick={() => setShowNotifications(false)}
+      >
+        ×
+      </button>
+      <h2 className="text-xl font-bold mb-4">Notifications</h2>
+      <div className="space-y-4 max-h-96 overflow-y-auto">
+        {notifications.length === 0 && <div className="text-gray-500">No notifications.</div>}
+        {notifications.map(n => (
+          <div key={n.id} className="border-b pb-2">
+            <div className="font-semibold">{n.title}</div>
+            <div className="text-sm text-gray-600">{n.message}</div>
+            <div className="text-xs text-gray-400">{new Date(n.timestamp).toLocaleString()}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 )}
     </div>
   );

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Star, MapPin, Edit3, Settings, Heart, Calendar, Award } from 'lucide-react';
 import { Book, User,ReadingCircle,Trade } from '../App';
 import { EditBook } from '../components/EditBook';
-import axios from 'axios';
+import api from '../api';
 
 interface ProfilePageProps {
   currentUser: User | null;
@@ -12,10 +12,14 @@ interface ProfilePageProps {
   readingCircles: ReadingCircle[],
   trades: Trade[],
   setShowAddBook: (show: boolean) => void;
+  setTrades: (trades: Trade[]) => void; // <-- add this
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ currentUser, onEditProfile , books ,readingCircles ,trades , setShowAddBook , setBooks }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({
+  currentUser, onEditProfile , books ,readingCircles ,trades , setShowAddBook , setBooks , setTrades
+}) => {
   const [activeTab, setActiveTab] = useState<'books' | 'trades' | 'circles' | 'stats'>('books');
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
 
   if (!currentUser) {
     return <div>Please log in to view your profile</div>;
@@ -34,9 +38,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ currentUser, onEditPro
 // Remove book handler
 const handleRemoveBook = async (bookId: string) => {
   if (!window.confirm("Are you sure you want to remove this book?")) return;
-  await axios.delete(`http://localhost:5000/api/books/${bookId}`);
+  await api.delete(`api/books/${bookId}`);
   setBooks(books.filter(b => b.id !== bookId)); // update state, no reload
 };
+
+  // Accept/Decline trade handler
+  const handleTradeAction = async (tradeId: string, action: 'accepted' | 'declined') => {
+    try {
+      const res = await api.put(`api/trades/${tradeId}`, { status: action });
+      if (res.status === 200) {
+        setTrades(
+          trades.map((trade: Trade) =>
+            trade.id === tradeId ? { ...trade, status: action } : trade
+          )
+        );
+      } else {
+        alert('Failed to update trade. Please try again.');
+      }
+    } catch (err) {
+      alert('Error updating trade.');
+    }
+  };
 
   const stats = {
     booksOwned: userBooks.length,
@@ -197,7 +219,11 @@ const handleRemoveBook = async (bookId: string) => {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Trade History</h2>
                 <div className="space-y-4">
                   {userTrades.map((trade) => (
-                    <div key={trade.id} className="border border-gray-200 rounded-lg p-6">
+                    <div
+                      key={trade.id}
+                      className="border border-gray-200 rounded-lg p-6 cursor-pointer hover:shadow"
+                      onClick={() => setSelectedTrade(trade)}
+                    >
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="font-semibold text-gray-900">{trade.bookTitle}</h3>
@@ -222,6 +248,28 @@ const handleRemoveBook = async (bookId: string) => {
                         <Calendar className="w-3 h-3 mr-1" />
                         {new Date(trade.requestDate).toLocaleDateString()}
                       </div>
+                      {trade.status === 'pending' && (
+              <div className="flex space-x-2 mt-4">
+                <button
+                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleTradeAction(trade.id, 'accepted');
+                  }}
+                >
+                  Accept
+                </button>
+                <button
+                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleTradeAction(trade.id, 'declined');
+                  }}
+                >
+                  Decline
+                </button>
+              </div>
+            )}
                     </div>
                   ))}
                 </div>
@@ -344,6 +392,39 @@ const handleRemoveBook = async (bookId: string) => {
     }}
   />
 )}
+
+{/* Trade Details Modal */}
+  {selectedTrade && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-lg relative">
+        <button
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+          onClick={() => setSelectedTrade(null)}
+        >
+          ×
+        </button>
+        <h2 className="text-xl font-bold mb-4">Trade Details</h2>
+        <div className="mb-2">
+          <span className="font-medium">Book:</span> {selectedTrade.bookTitle}
+        </div>
+        <div className="mb-2">
+          <span className="font-medium">Requester:</span> {selectedTrade.requesterName}
+        </div>
+        <div className="mb-2">
+          <span className="font-medium">Owner:</span> {selectedTrade.ownerName}
+        </div>
+        <div className="mb-2">
+          <span className="font-medium">Status:</span> {selectedTrade.status}
+        </div>
+        <div className="mb-2">
+          <span className="font-medium">Requested On:</span> {new Date(selectedTrade.requestDate).toLocaleString()}
+        </div>
+        <div className="mb-2">
+          <span className="font-medium">Message:</span> {selectedTrade.message}
+        </div>
+      </div>
+    </div>
+  )}
     </div>
   );
 };

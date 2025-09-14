@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Users, TrendingUp, Clock, Star, ArrowRight, ExternalLink } from 'lucide-react';
 import { User, Page,Book, ReadingCircle,Trade } from '../App';
+import api from '../api';
 
 interface HomePageProps {
   currentUser: User | null;
@@ -8,9 +9,10 @@ interface HomePageProps {
   books: Book[];
   readingCircles: ReadingCircle[];
   trades: Trade[];
+  setTrades: (trades: Trade[]) => void; // <-- add this
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,books ,readingCircles ,trades}) => {
+export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,books ,readingCircles ,trades, setTrades }) => {
   const recentBooks = books.slice(0, 4);
   const popularCircles = readingCircles.slice(0, 3);
   const pendingTrades = trades.filter(trade => 
@@ -23,6 +25,29 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
     { label: 'Active Circles', value: '2.3K', icon: Users, color: 'bg-green-500' },
     { label: 'Books Exchanged', value: '8.7K', icon: TrendingUp, color: 'bg-purple-500' },
   ];
+
+  const handlePendingRequestTrade = async (tradeId: string) => {
+    // Implement trade request handling logic here
+    // /api/trades/:id
+    const res = await api.put(`/trades/${tradeId}`, { status: 'accepted' });
+    if (res.status === 200) {
+      alert('Trade request accepted!');
+      // Optionally, refresh the trades list or update state
+    } else {
+      alert('Failed to accept trade request. Please try again.');
+    }
+  };
+
+  const handleTradeAction = async (tradeId: string, action: 'accepted' | 'declined') => {
+    const res = await api.put(`/trades/${tradeId}`, { status: action });
+    if (res.status === 200) {
+      setTrades(trades.map(trade =>
+        trade.id === tradeId ? { ...trade, status: action } : trade
+      ));
+    } else {
+      alert('Failed to update trade. Please try again.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,7 +103,8 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Pending Trades</h2>
-              <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center">
+              <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
+               onClick={() => onPageChange('profile')}>
                 View all <ArrowRight className="ml-1 w-4 h-4" />
               </button>
             </div>
@@ -99,10 +125,16 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
                     }
                   </p>
                   <div className="flex space-x-2">
-                    <button className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                    <button
+                      className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                      onClick={() => handleTradeAction(trade.id, 'accepted')}
+                    >
                       Accept
                     </button>
-                    <button className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">
+                    <button
+                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                      onClick={() => handleTradeAction(trade.id, 'declined')}
+                    >
                       Decline
                     </button>
                   </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Camera, Save, User, Mail, MapPin, Plus} from 'lucide-react';
-import axios from 'axios';
+import api from '../api';
 import { User as UserType } from '../App';
 
 interface EditProfileModalProps {
@@ -65,7 +65,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
     
     try {
       // API call to update user profile
-      const response = await axios.put(`http://localhost:5000/api/users/${user.id}/profile`, {
+      const response = await api.put(`users/${user.id}/profile`, {
         name: formData.name,
         avatar: formData.avatar,
         location: formData.location,

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../api"
 import { Book, User } from "../App";
 
 interface AddBookProps {
@@ -37,7 +37,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   setLoading(true);
   setError(null);
   try {
-    const res = await axios.post("http://localhost:5000/api/addbook", {
+    const res = await api.post("addbook", {
       ...form,
       cover: form.cover.trim() ? form.cover : DUMMY_COVER, // Use dummy if empty
       ownerId: owner.id,
