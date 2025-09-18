@@ -13,10 +13,11 @@ interface ProfilePageProps {
   trades: Trade[],
   setShowAddBook: (show: boolean) => void;
   setTrades: (trades: Trade[]) => void; // <-- add this
+  onPageChange?: (page: any, circleId?: string) => void;
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
-  currentUser, onEditProfile , books ,readingCircles ,trades , setShowAddBook , setBooks , setTrades
+  currentUser, onEditProfile , books ,readingCircles ,trades , setShowAddBook , setBooks , setTrades, onPageChange
 }) => {
   const [activeTab, setActiveTab] = useState<'books' | 'trades' | 'circles' | 'stats'>('books');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
@@ -40,6 +41,24 @@ const handleRemoveBook = async (bookId: string) => {
   if (!window.confirm("Are you sure you want to remove this book?")) return;
   await api.delete(`api/books/${bookId}`);
   setBooks(books.filter(b => b.id !== bookId)); // update state, no reload
+};
+
+// Leave circle handler
+const handleLeaveCircle = async (circleId: string) => {
+  if (!window.confirm("Are you sure you want to leave this circle?")) return;
+  try {
+    const res = await api.delete(`circles/${circleId}/leave`, {
+      data: { userId: currentUser.id },
+    });
+    if (res.status === 200) {
+      // Update the user's circlesjoined array
+      currentUser.circlesjoined = currentUser.circlesjoined.filter(id => id !== circleId);
+      alert(res.data.message);
+    }
+  } catch (error) {
+    console.error('Error leaving circle:', error);
+    alert('Failed to leave circle');
+  }
 };
 
   // Accept/Decline trade handler
@@ -295,10 +314,16 @@ const handleRemoveBook = async (bookId: string) => {
                       </div>
                       <p className="text-gray-600 text-sm mb-4">{circle.description}</p>
                       <div className="flex space-x-2">
-                        <button className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors">
+                        <button 
+                          className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors"
+                          onClick={() => onPageChange?.('circle-discussion', circle.id)}
+                        >
                           View Posts
                         </button>
-                        <button className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+                        <button 
+                          className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                          onClick={() => handleLeaveCircle(circle.id)}
+                        >
                           Leave Circle
                         </button>
                       </div>
@@ -422,6 +447,21 @@ const handleRemoveBook = async (bookId: string) => {
         <div className="mb-2">
           <span className="font-medium">Message:</span> {selectedTrade.message}
         </div>
+        {selectedTrade.tradeDescription && (
+          <div className="mb-2">
+            <span className="font-medium">Trade Description:</span> {selectedTrade.tradeDescription}
+          </div>
+        )}
+        {selectedTrade.requesterContact && (
+          <div className="mb-2">
+            <span className="font-medium">Contact:</span> {selectedTrade.requesterContact}
+          </div>
+        )}
+        {selectedTrade.requesterLocation && (
+          <div className="mb-2">
+            <span className="font-medium">Requester Location:</span> {selectedTrade.requesterLocation}
+          </div>
+        )}
       </div>
     </div>
   )}

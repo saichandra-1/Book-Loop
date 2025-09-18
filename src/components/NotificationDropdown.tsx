@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Bell, MessageCircle, Gift, Clock, X, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, MessageCircle, Gift, Clock, X, Check, Eye } from 'lucide-react';
 import { Notification } from '../App';
+import api from '../api';
 
 const mockNotifications: Notification[] = [
   {
@@ -50,24 +51,74 @@ const mockNotifications: Notification[] = [
   }
 ];
 
-export const NotificationDropdown: React.FC = () => {
+interface NotificationDropdownProps {
+  onViewAll?: () => void;
+  currentUser?: any;
+}
+
+export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ onViewAll, currentUser }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      if (currentUser?.id) {
+        const response = await api.get('notifications/', { params: { userId: currentUser.id } });
+        setNotifications(response.data || []);
+      } else {
+        setNotifications(mockNotifications);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      // Fallback to mock data if API fails
+      setNotifications(mockNotifications);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await api.put(`notifications/${id}/read`);
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      // Fallback to local update
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, read: true } : notif
+        )
+      );
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
+  const markAllAsRead = async () => {
+    try {
+      if (currentUser?.id) {
+        await api.put('notifications/mark-all-read', { userId: currentUser.id });
+      }
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      // Fallback to local update
+      setNotifications(prev => 
+        prev.map(notif => ({ ...notif, read: true }))
+      );
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -141,7 +192,12 @@ export const NotificationDropdown: React.FC = () => {
 
             {/* Notifications List */}
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {isLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="text-gray-500">Loading...</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500">No notifications yet</p>
@@ -189,8 +245,15 @@ export const NotificationDropdown: React.FC = () => {
             {/* Footer */}
             {notifications.length > 0 && (
               <div className="p-4 border-t border-gray-100">
-                <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  View all notifications
+                <button 
+                  onClick={() => {
+                    setIsOpen(false);
+                    onViewAll?.();
+                  }}
+                  className="w-full flex items-center justify-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span>View all notifications</span>
                 </button>
               </div>
             )}

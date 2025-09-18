@@ -18,10 +18,19 @@ const userschema = new mongoose.Schema({
   email: { type: String, required: true },
   password: { type: String, required: true },
   avatar: { type: String, default: null },
-  location: { type: String, default: null },
+  location: { 
+    city: { type: String, default: null },
+    state: { type: String, default: null },
+    country: { type: String, default: null },
+    coordinates: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null }
+    }
+  },
   bio: { type: String, default: null },
   booksowned: { type: [String], default: [] },
   circlesjoined: { type: [String], default: [] },
+  favorites: { type: [String], default: [] },
   preferences: { 
     genres: { type: [String], default: [] },
     authors: { type: [String], default: [] },
@@ -42,7 +51,18 @@ const booksschema= new mongoose.Schema({
   reviews: { type: Number, default: 0 },
   description: { type: String, required: true },
   cover: { type: String, required: true },
-  condition: { type: String, required: true }
+  condition: { type: String, required: true },
+  location: { 
+    city: { type: String, default: null },
+    state: { type: String, default: null },
+    country: { type: String, default: null },
+    coordinates: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null }
+    }
+  },
+  price: { type: Number, default: null }, // For selling books
+  isForSale: { type: Boolean, default: false }
 });
 
 const commentschema = new mongoose.Schema({
@@ -63,7 +83,7 @@ const postschema = new mongoose.Schema({
   circleId: { type: String, required: true }, // reference by UUID
   content: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
-  comments: [{ type: String, ref: 'Comment' }],  // Now storing comment UUIDs
+  comments: [{ type: String }],  // Now storing comment UUIDs as strings
   likes: { type: Number, default: 0 }
 });
 
@@ -73,7 +93,7 @@ const readingcircleschema = new mongoose.Schema({
   description: { type: String, required: true },
   members: { type: [String], default: [] },
   memberscount: { type: Number, default: 0 },
-  posts: [{ type: String  , ref: 'Post' }],  // Now storing UUIDs, not ObjectIds
+  posts: [{ type: String }],  // Now storing UUIDs as strings
   currentbook: { type: String, default: null },
   avatar: { type: String, default: null },
   privacy: { type: String, enum: ['public', 'private'], default: 'public' }
@@ -90,7 +110,30 @@ const tradeschema = new mongoose.Schema({
   bookTitle: { type: String, required: true },
   status: { type: String, enum: ['pending', 'accepted', 'declined', 'completed'], default: 'pending' },
   requestDate: { type: Date, default: Date.now },
-  message: { type: String, default: '' }
+  message: { type: String, default: '' },
+  tradeDescription: { type: String, default: '' },
+  requesterContact: { type: String, default: '' },
+  requesterLocation: { type: String, default: '' }
+});
+
+const notificationschema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true, default: () => uuidv4() },
+  userId: { type: String, required: true },
+  type: { type: String, enum: ['trade', 'circle', 'system'], required: true },
+  title: { type: String, required: true },
+  message: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  read: { type: Boolean, default: false },
+  actionUrl: { type: String, default: null },
+  relatedId: { type: String, default: null } // ID of related trade, circle, etc.
+});
+
+// Global options for genres / languages / authors
+const optionsschema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true, default: () => uuidv4() },
+  genres: { type: [String], default: [] },
+  languages: { type: [String], default: [] },
+  authors: { type: [String], default: [] }
 });
 
 
@@ -100,6 +143,8 @@ const ReadingCircle = mongoose.model("ReadingCircle", readingcircleschema);
 const Comment = mongoose.model('Comment', commentschema);
 const Trade = mongoose.model('Trade', tradeschema);
 const Post = mongoose.model('Post', postschema);
+const Notification = mongoose.model('Notification', notificationschema);
+const Options = mongoose.model('Options', optionsschema);
 
 module.exports ={
   connectDB,
@@ -108,5 +153,7 @@ module.exports ={
     ReadingCircle,
     Comment,
     Post,
-    Trade
+    Trade,
+    Notification,
+    Options
 };

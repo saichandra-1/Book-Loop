@@ -6,11 +6,14 @@ import { BooksPage } from './pages/BooksPage';
 import { CirclesPage } from './pages/CirclesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { RecommendationsPage } from './pages/RecommendationsPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { CircleDiscussionPage } from './pages/CircleDiscussionPage';
 import { EditProfileModal } from './components/EditProfileModal';
 import { AddBook } from './components/AddBook';
 import api from './api';
+import { SearchResultsPage } from './pages/SearchResultsPage';
 
-export type Page = 'home' | 'books' | 'circles' | 'profile' | 'recommendations';
+export type Page = 'home' | 'books' | 'circles' | 'profile' | 'recommendations' | 'notifications' | 'circle-discussion'|'search';
 
 export interface User {
   id: string;
@@ -21,6 +24,7 @@ export interface User {
   location?: string;
   bio?: string;
   circlesjoined: string[];
+  favorites?: string[];
   preferences: {
     genres: string[];
     languages: string[];
@@ -87,6 +91,9 @@ export interface Trade {
   status: 'pending' | 'accepted' | 'declined' | 'completed';
   requestDate: Date;
   message: string;
+  tradeDescription?: string;
+  requesterContact?: string;
+  requesterLocation?: string;
 }
 
 export interface Notification {
@@ -109,6 +116,8 @@ function App() {
   const [showAddBook, setShowAddBook] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedCircleId, setSelectedCircleId] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is logged in (mock check)
@@ -124,6 +133,7 @@ function App() {
           avatar: user.data.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=150&h=150&fit=crop&crop=face',
           booksOwned: user.data.booksowned || [],
           circlesjoined: user.data.circlesjoined || [],
+        favorites: user.data.favorites || [],
           preferences: {
             genres: user.data.preferences?.genres || [],
             languages: ['English'],
@@ -151,7 +161,7 @@ function App() {
       tradesdata();
 
       const notificationsdata = async() => {
-        const notifications= await api.get('notifications/');
+        const notifications= await api.get('notifications/', { params: { userId: userId } });
         setNotifications(notifications.data);
       }
       notificationsdata();
@@ -171,6 +181,7 @@ function App() {
       avatar: user.data.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=150&h=150&fit=crop&crop=face',
       booksOwned: user.data.booksowned || [],
       circlesjoined: user.data.circlesjoined || [],
+      favorites: user.data.favorites || [],
       preferences: {
         genres: user.data.preferences?.genres || [],
         languages: ['English'],
@@ -191,6 +202,7 @@ function App() {
       avatar: user.data.avatar || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?w=150&h=150&fit=crop&crop=face',
       booksOwned: [],
       circlesjoined: [],
+      favorites: [],
       preferences: {
         genres: [],
         languages: ['English'],
@@ -216,31 +228,66 @@ function App() {
     setShowEditProfile(false);
   };
 
+  const handlePageChange = (page: Page, circleId?: string) => {
+  setCurrentPage(page);
+  if (page !== 'search') setSearchQuery(null);
+  if (circleId) setSelectedCircleId(circleId);
+};
+
   const renderCurrentPage = () => {
+    if (searchQuery) {
+      return (
+        <SearchResultsPage
+          query={searchQuery}
+          books={books}
+          circles={readingCircles}
+          onPageChange={handlePageChange}
+        />
+      );
+    }
     switch (currentPage) {
       case 'home':
         return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} setTrades={setTrades} />;
       case 'books':
         return <BooksPage currentUser={currentUser} books={books} />;
       case 'circles':
-        return <CirclesPage currentUser={currentUser} readingCircles={readingCircles} />;
+        return <CirclesPage currentUser={currentUser} readingCircles={readingCircles} onPageChange={(p: string, cid?: string) => handlePageChange(p as Page, cid)} />;
       case 'profile':
-        return <ProfilePage currentUser={currentUser} onEditProfile={() => setShowEditProfile(true)} books={books} readingCircles={readingCircles} trades={trades} setShowAddBook={setShowAddBook} setBooks={setBooks} setTrades={setTrades} />;
+        return <ProfilePage currentUser={currentUser} onEditProfile={() => setShowEditProfile(true)} books={books} readingCircles={readingCircles} trades={trades} setShowAddBook={setShowAddBook} setBooks={setBooks} setTrades={setTrades} onPageChange={handlePageChange} />;
       case 'recommendations':
         return <RecommendationsPage currentUser={currentUser} books={books} readingCircles={readingCircles} />;
+      case 'notifications':
+        return <NotificationsPage currentUser={currentUser} onPageChange={(p: string) => setCurrentPage(p as Page)} />;
+      case 'circle-discussion':
+        return <CircleDiscussionPage currentUser={currentUser} circleId={selectedCircleId} onPageChange={(p: string) => setCurrentPage(p as Page)} />;
       default:
-        return <HomePage currentUser={currentUser} onPageChange={setCurrentPage} books={books} readingCircles={readingCircles} trades={trades} setTrades={setTrades} />;
+        return <HomePage currentUser={currentUser} onPageChange={(p: string) => setCurrentPage(p as Page)} books={books} readingCircles={readingCircles} trades={trades} setTrades={setTrades} />;
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <AuthPage
+        onLogin={handleLogin}
+        onSignup={handleSignup}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
         currentPage={currentPage} 
-        onPageChange={setCurrentPage}
+        onPageChange={handlePageChange}
         currentUser={currentUser}
         onLogout={handleLogout}
         onShowNotifications={() => setShowNotifications(true)}
+        onUpdateUser={handleUpdateProfile}
+        onViewAllNotifications={() => handlePageChange('notifications')}
+        onSearch={q => {
+          setSearchQuery(q);
+          setCurrentPage('search');
+        }}
       />
       <main className="pt-16">
         {renderCurrentPage()}
@@ -255,39 +302,39 @@ function App() {
       )}
 
       {showAddBook && currentUser && (
-  <AddBook
-    owner={currentUser}
-    onClose={() => setShowAddBook(false)}
-    onBookAdded={(book) => {
-      setBooks(prev => [...prev, book]);
-      setShowAddBook(false);
-    }}
-  />
-)}
+        <AddBook
+          owner={currentUser}
+          onClose={() => setShowAddBook(false)}
+          onBookAdded={(book) => {
+            setBooks((prev: typeof books) => [...prev, book]);
+            setShowAddBook(false);
+          }}
+        />
+      )}
 
-{showNotifications && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div className="bg-white rounded-xl p-8 max-w-lg w-full shadow-lg relative">
-      <button
-        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-        onClick={() => setShowNotifications(false)}
-      >
-        ×
-      </button>
-      <h2 className="text-xl font-bold mb-4">Notifications</h2>
-      <div className="space-y-4 max-h-96 overflow-y-auto">
-        {notifications.length === 0 && <div className="text-gray-500">No notifications.</div>}
-        {notifications.map(n => (
-          <div key={n.id} className="border-b pb-2">
-            <div className="font-semibold">{n.title}</div>
-            <div className="text-sm text-gray-600">{n.message}</div>
-            <div className="text-xs text-gray-400">{new Date(n.timestamp).toLocaleString()}</div>
+      {showNotifications && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl p-8 max-w-lg w-full shadow-lg relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowNotifications(false)}
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4">Notifications</h2>
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              {notifications.length === 0 && <div className="text-gray-500">No notifications.</div>}
+              {notifications.map((n: { id: string; title: string; message: string; timestamp: string | number | Date }) => (
+                <div key={n.id} className="border-b pb-2">
+                  <div className="font-semibold">{n.title}</div>
+                  <div className="text-sm text-gray-600">{n.message}</div>
+                  <div className="text-xs text-gray-400">{new Date(n.timestamp).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-)}
+        </div>
+      )}
     </div>
   );
 }

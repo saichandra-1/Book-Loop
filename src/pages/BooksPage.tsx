@@ -1,36 +1,134 @@
-import React, { useState } from 'react';
-import { Search, Filter, Star, MapPin, Heart, ExternalLink } from 'lucide-react';
-import { User,Book } from '../App';
-import {  } from '../data/mockData';
+import React, { useEffect, useState } from 'react';
+import { Search, Filter, Star, MapPin, Heart, ExternalLink, X } from 'lucide-react';
+import { User, Book } from '../App';
+import api from '../api';
 
 interface BooksPageProps {
   currentUser: User | null;
-  books: Book[]
+  books: Book[];
 }
 
-export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => {
+export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [selectedLanguage, setSelectedLanguage] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null); // <-- Add this
+  const [showTradeConfirm, setShowTradeConfirm] = useState(false);
+  const [tradeDescription, setTradeDescription] = useState('');
+  const [tradeContact, setTradeContact] = useState('');
+  const [tradeLocation, setTradeLocation] = useState('');
+  const [requestedBookIds, setRequestedBookIds] = useState<Set<string>>(new Set());
 
-  const genres = ['all', ...Array.from(new Set(books.map(book => book.genre)))];
+  const [availableGenres, setAvailableGenres] = useState<string[]>([]);
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await api.get('options');
+        if (mounted && resp.status === 200) {
+          const genArr = Array.isArray(resp.data?.genres) ? resp.data.genres : [];
+          const langArr = Array.isArray(resp.data?.languages) ? resp.data.languages : [];
+          setAvailableGenres(genArr);
+          setAvailableLanguages(langArr);
+        }
+      } catch (e) {
+        // fallback: infer from books
+        const inferredGenres = Array.from(new Set(books.map(b => b.genre)));
+        const inferredLangs = Array.from(new Set(books.map(b => b.language)));
+        setAvailableGenres(inferredGenres);
+        setAvailableLanguages(inferredLangs);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [books]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!currentUser) return;
+      try {
+        const res = await api.get(`trades/user/${currentUser.id}`);
+        if (mounted && res.status === 200 && Array.isArray(res.data)) {
+          const pending = res.data.filter((t: any) => t.status === 'pending' && t.requesterId === currentUser.id);
+          setRequestedBookIds(new Set(pending.map((t: any) => t.bookId)));
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { mounted = false; };
+  }, [currentUser]);
+
+  const genres = ['all', ...availableGenres];
   const conditions = ['all', 'new', 'like-new', 'good', 'fair'];
-  const languages = ['all', ...Array.from(new Set(books.map(book => book.language)))];
+  const languages = ['all', ...availableLanguages];
 
   const filteredBooks = books.filter(book => {
     const matchesSearch = book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         book.author.toLowerCase().includes(searchTerm.toLowerCase());
+      book.author.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesGenre = selectedGenre === 'all' || book.genre === selectedGenre;
     const matchesCondition = selectedCondition === 'all' || book.condition === selectedCondition;
     const matchesLanguage = selectedLanguage === 'all' || book.language === selectedLanguage;
-    
     return matchesSearch && matchesGenre && matchesCondition && matchesLanguage;
   });
 
-  const handleRequestExchange = (bookId: string) => {
-    alert(`Exchange request sent for book ${bookId}`);
+  // Sort so that current user's books come first
+  const sortedBooks = [...filteredBooks].sort((a, b) => {
+    if (currentUser) {
+      if (a.ownerId === currentUser.id && b.ownerId !== currentUser.id) return -1;
+      if (a.ownerId !== currentUser.id && b.ownerId === currentUser.id) return 1;
+    }
+    return 0;
+  });
+
+  const handleRequestExchange = async (bookId: string) => {
+    if (!currentUser) return;
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
+    try {
+      const payload = {
+        requesterId: currentUser.id,
+        requesterName: currentUser.name,
+        ownerId: book.ownerId,
+        ownerName: book.ownerName,
+        bookId: book.id,
+        bookTitle: book.title,
+        message: `Hi ${book.ownerName}, I'm interested in trading for "${book.title}".`,
+        tradeDescription,
+        requesterContact: tradeContact,
+        requesterLocation: tradeLocation
+      };
+      const res = await api.post('trades', payload);
+      if (res.status === 201) {
+        alert('Trade request sent to owner.');
+        setShowTradeConfirm(false);
+        setTradeDescription('');
+        setTradeContact('');
+        setTradeLocation('');
+        setRequestedBookIds(prev => new Set([...Array.from(prev), book.id]));
+      }
+    } catch (e) {
+      alert('Failed to send trade request');
+    }
+  };
+
+  const toggleFavorite = async (bookId: string) => {
+    if (!currentUser) return;
+    try {
+      const isFav = (currentUser.favorites || []).includes(bookId);
+      if (isFav) {
+        await api.delete(`users/${currentUser.id}/favorites/${bookId}`);
+        currentUser.favorites = (currentUser.favorites || []).filter(id => id !== bookId);
+      } else {
+        await api.post(`users/${currentUser.id}/favorites/${bookId}`);
+        currentUser.favorites = [ ...(currentUser.favorites || []), bookId ];
+      }
+    } catch (e) {
+      // ignore UI errors for now
+    }
   };
 
   return (
@@ -153,14 +251,18 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => 
         {/* Results */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-600">
-            {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''} found
+            {sortedBooks.length} book{sortedBooks.length !== 1 ? 's' : ''} found
           </p>
         </div>
 
         {/* Books Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBooks.map((book) => (
-            <div key={book.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow group">
+          {sortedBooks.map((book) => (
+            <div
+              key={book.id}
+              className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow group cursor-pointer"
+              onClick={() => setSelectedBook(book)}
+            >
               <div className="relative">
                 <img
                   src={book.cover}
@@ -169,24 +271,24 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => 
                 />
                 <div className="absolute top-3 left-3">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    book.available 
-                      ? 'bg-green-100 text-green-700' 
+                    book.available
+                      ? 'bg-green-100 text-green-700'
                       : 'bg-red-100 text-red-700'
                   }`}>
                     {book.available ? 'Available' : 'Unavailable'}
                   </span>
                 </div>
                 <div className="absolute top-3 right-3">
-                  <button className="p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-colors">
-                    <Heart className="w-4 h-4 text-gray-600 hover:text-red-500 transition-colors" />
+                  <button className="p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-colors" onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }}>
+                    <Heart className={`w-4 h-4 ${currentUser?.favorites?.includes(book.id) ? 'text-red-500 fill-current' : 'text-gray-600'} transition-colors`} />
                   </button>
                 </div>
                 <div className="absolute bottom-3 right-3">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                     book.condition === 'new' ? 'bg-green-100 text-green-700' :
-                    book.condition === 'like-new' ? 'bg-blue-100 text-blue-700' :
-                    book.condition === 'good' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-orange-100 text-orange-700'
+                      book.condition === 'like-new' ? 'bg-blue-100 text-blue-700' :
+                        book.condition === 'good' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-orange-100 text-orange-700'
                   }`}>
                     {book.condition === 'like-new' ? 'Like New' : 
                      book.condition.charAt(0).toUpperCase() + book.condition.slice(1)}
@@ -222,13 +324,20 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => 
 
                 <div className="flex space-x-2">
                   <button
-                    onClick={() => handleRequestExchange(book.id)}
-                    disabled={!book.available || book.ownerId === currentUser?.id}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setSelectedBook(book);
+                      setShowTradeConfirm(true);
+                    }}
+                    disabled={!book.available || book.ownerId === currentUser?.id || requestedBookIds.has(book.id)}
                     className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
-                    {book.ownerId === currentUser?.id ? 'Your Book' : 'Request'}
+                    {book.ownerId === currentUser?.id ? 'Your Book' : requestedBookIds.has(book.id) ? 'Requested' : 'Request'}
                   </button>
-                  <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button
+                    className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                    onClick={e => e.stopPropagation()}
+                  >
                     <ExternalLink className="w-4 h-4 text-gray-600" />
                   </button>
                 </div>
@@ -238,7 +347,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => 
         </div>
 
         {/* No Results */}
-        {filteredBooks.length === 0 && (
+        {sortedBooks.length === 0 && (
           <div className="text-center py-12">
             <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-8 h-8 text-gray-400" />
@@ -259,6 +368,114 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser , books }) => 
           </div>
         )}
       </div>
+
+      {/* Book Details Modal */}
+      {selectedBook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl p-8 max-w-lg w-full shadow-lg relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setSelectedBook(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="flex flex-col md:flex-row gap-6">
+              <img
+                src={selectedBook.cover}
+                alt={selectedBook.title}
+                className="w-40 h-60 object-cover rounded-lg mx-auto md:mx-0"
+              />
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold mb-2">{selectedBook.title}</h2>
+                <p className="text-gray-700 mb-1">by {selectedBook.author}</p>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="text-sm text-gray-600">{selectedBook.rating}</span>
+                  <span className="text-xs text-gray-400">({selectedBook.reviews} reviews)</span>
+                </div>
+                <div className="mb-2">
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full mr-2">{selectedBook.genre}</span>
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{selectedBook.language}</span>
+                </div>
+                <div className="mb-2">
+                  <span className="font-medium">Condition:</span> {selectedBook.condition.charAt(0).toUpperCase() + selectedBook.condition.slice(1)}
+                </div>
+                <div className="mb-2">
+                  <span className="font-medium">Owner:</span> {selectedBook.ownerName}
+                </div>
+                <div className="mb-2">
+                  <span className="font-medium">Availability:</span> {selectedBook.available ? 'Available' : 'Unavailable'}
+                </div>
+                <div className="mb-4">
+                  <span className="font-medium">Description:</span>
+                  <p className="text-gray-600 mt-1">{selectedBook.description}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => {
+                      handleRequestExchange(selectedBook.id);
+                      setSelectedBook(null);
+                    }}
+                    disabled={!selectedBook.available || selectedBook.ownerId === currentUser?.id}
+                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {selectedBook.ownerId === currentUser?.id ? 'Your Book' : 'Request Exchange'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trade Confirm Modal */}
+      {showTradeConfirm && selectedBook && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl p-8 max-w-lg w-full shadow-lg relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowTradeConfirm(false)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-bold mb-4">Confirm Trade Request</h2>
+            <div className="space-y-3 mb-4">
+              <div className="text-sm text-gray-700"><span className="font-medium">Book:</span> {selectedBook.title} by {selectedBook.author}</div>
+              <div className="text-sm text-gray-700"><span className="font-medium">Owner:</span> {selectedBook.ownerName}</div>
+              <div className="text-sm text-gray-700"><span className="font-medium">Condition:</span> {selectedBook.condition}</div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Trade Details</label>
+                <textarea value={tradeDescription} onChange={e => setTradeDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg" placeholder="Describe your offer, availability, etc." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Info</label>
+                <input value={tradeContact} onChange={e => setTradeContact(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg" placeholder="Email or phone" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Location</label>
+                <input value={tradeLocation} onChange={e => setTradeLocation(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg" placeholder="City, State" />
+              </div>
+            </div>
+            <div className="flex space-x-2 mt-6">
+              <button
+                className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200"
+                onClick={() => setShowTradeConfirm(false)}
+              >
+                Back
+              </button>
+              <button
+                className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                onClick={() => handleRequestExchange(selectedBook.id)}
+                disabled={!tradeContact.trim()}
+              >
+                Confirm Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

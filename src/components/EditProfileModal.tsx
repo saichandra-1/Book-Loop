@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Save, User, Mail, MapPin, Plus} from 'lucide-react';
 import api from '../api';
 import { User as UserType } from '../App';
@@ -31,30 +31,46 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onSave
   // File upload ref
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Predefined lists
-  const availableGenres = [
+  // Options fetched from backend with sensible defaults
+  const [availableGenres, setAvailableGenres] = useState<string[]>([
     'Fiction', 'Non-Fiction', 'Mystery', 'Romance', 'Fantasy', 'Science Fiction',
     'Biography', 'History', 'Self-Help', 'Business', 'Psychology', 'Philosophy',
     'Poetry', 'Drama', 'Adventure', 'Horror', 'Thriller', 'Comedy', 'Crime',
     'Historical Fiction', 'Contemporary Fiction', 'Young Adult', 'Children',
     'Memoir', 'Travel', 'Health & Fitness', 'Cooking', 'Art', 'Music', 'Sports'
-  ];
-  
-  const availableLanguages = [
+  ]);
+  const [availableLanguages, setAvailableLanguages] = useState<string[]>([
     'English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian',
     'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi', 'Bengali', 'Urdu',
     'Dutch', 'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech',
     'Hungarian', 'Romanian', 'Greek', 'Turkish', 'Hebrew', 'Thai', 'Vietnamese'
-  ];
-  
-  const availableAuthors = [
+  ]);
+  const [availableAuthors, setAvailableAuthors] = useState<string[]>([
     'J.K. Rowling', 'Stephen King', 'Agatha Christie', 'William Shakespeare',
     'Jane Austen', 'Mark Twain', 'Ernest Hemingway', 'F. Scott Fitzgerald',
     'George Orwell', 'Harper Lee', 'J.R.R. Tolkien', 'Dan Brown', 'John Grisham',
     'Paulo Coelho', 'Haruki Murakami', 'Maya Angelou', 'Toni Morrison',
     'Margaret Atwood', 'Neil Gaiman', 'Gillian Flynn', 'Donna Tartt',
     'Khaled Hosseini', 'Chimamanda Ngozi Adichie', 'Yuval Noah Harari'
-  ];
+  ]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await api.get('options');
+        if (mounted && resp.status === 200) {
+          const { genres = [], languages = [], authors = [] } = resp.data || {};
+          if (Array.isArray(genres) && genres.length) setAvailableGenres(genres);
+          if (Array.isArray(languages) && languages.length) setAvailableLanguages(languages);
+          if (Array.isArray(authors) && authors.length) setAvailableAuthors(authors);
+        }
+      } catch (e) {
+        // keep defaults on failure
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookOpen, Home, Users, User, Sparkles, Search, LogOut, Settings } from 'lucide-react';
 import { Page, User as UserType } from '../App';
 import { NotificationDropdown } from './NotificationDropdown';
+import { SettingsModal } from './SettingsModal';
 
 interface HeaderProps {
   currentPage: Page;
-  onPageChange: (page: Page) => void;
+   onPageChange: (page: Page, circleId?: string) => void;
   currentUser: UserType | null;
   onLogout: () => void;
   onShowNotifications: () => void;
+  onUpdateUser: (updatedUser: UserType) => void;
+  onViewAllNotifications?: () => void;
+  onSearch: (searchTerm: string) => void; // <-- Add this prop
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, currentUser, onLogout, onShowNotifications }) => {
+export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, currentUser, onLogout, onShowNotifications, onUpdateUser, onViewAllNotifications, onSearch }) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const navItems = [
     { key: 'home' as Page, label: 'Home', icon: Home },
     { key: 'books' as Page, label: 'Books', icon: BookOpen },
@@ -19,6 +25,14 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, curre
     { key: 'recommendations' as Page, label: 'Discover', icon: Sparkles },
     { key: 'profile' as Page, label: 'Profile', icon: User },
   ];
+
+  const handleSearch = (e: React.FormEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      onSearch(searchTerm.trim());
+      setSearchTerm('');
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
@@ -45,6 +59,11 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, curre
               <input
                 type="text"
                 placeholder="Search books, authors, or circles..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSearch(e);
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -70,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, curre
 
           {/* User Menu */}
           <div className="flex items-center space-x-3 ml-4">
-            <NotificationDropdown />
+            <NotificationDropdown onViewAll={onViewAllNotifications} currentUser={currentUser} />
             
             {currentUser && (
               <div className="relative group">
@@ -95,7 +114,10 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, curre
                       <User className="w-4 h-4" />
                       <span>Profile</span>
                     </button>
-                    <button className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                    <button 
+                      onClick={() => setShowSettings(true)}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
                       <Settings className="w-4 h-4" />
                       <span>Settings</span>
                     </button>
@@ -122,10 +144,24 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onPageChange, curre
           <input
             type="text"
             placeholder="Search books, authors, or circles..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleSearch(e);
+            }}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && currentUser && (
+        <SettingsModal
+          user={currentUser}
+          onClose={() => setShowSettings(false)}
+          onUpdateUser={onUpdateUser}
+        />
+      )}
     </header>
   );
 };

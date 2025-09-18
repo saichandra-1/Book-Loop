@@ -7,8 +7,9 @@ import api from '../api';
 interface CirclesPageProps {
   currentUser: User | null;
   readingCircles: ReadingCircle[];
+  onPageChange?: (page: string,circleId?:string) => void;
 }
-export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCircles }) => {
+export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCircles, onPageChange }) => {
   const [activeTab, setActiveTab] = useState<'discover' | 'my-circles'>('discover');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -214,7 +215,10 @@ export const CirclesPage: React.FC<CirclesPageProps> = ({ currentUser, readingCi
                   </button>
                 ) : (
                   <div className="flex space-x-2">
-                    <button className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors">
+                    <button 
+                      className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors"
+                      onClick={() => onPageChange?.('circle-discussion', circle.id)}
+                    >
                       View Posts
                     </button>
                     <button

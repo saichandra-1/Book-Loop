@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Sparkles, Star, BookOpen, Users, TrendingUp, RefreshCw } from 'lucide-react';
 import { User ,Book,ReadingCircle } from '../App';
 import axios from 'axios';
+import api from '../api';
 
 interface RecommendationsPageProps {
   currentUser: User | null;
@@ -11,27 +12,27 @@ interface RecommendationsPageProps {
 
 export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ currentUser , books,readingCircles }) => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'books' | 'circles' | 'trending'>('all');
+  const [loading, setLoading] = useState(false);
+  const [bookRecoIds, setBookRecoIds] = useState<string[]>([]);
+  const [circleRecoIds, setCircleRecoIds] = useState<string[]>([]);
 
   if (!currentUser) {
     return <div>Please log in to see recommendations</div>;
   }
 
-  // Mock recommendation logic based on user preferences
-  const recommendedBooks = books
-    .filter(book => 
-      currentUser.preferences.genres.some(genre => 
-        book.genre.toLowerCase().includes(genre.toLowerCase())
-      ) || 
-      currentUser.preferences.authors.some(author => 
-        book.author.toLowerCase().includes(author.toLowerCase())
-      )
-    )
-    .filter(book => book.ownerId !== currentUser.id)
-    .slice(0, 8);
+  const recommendedBooks = useMemo(() => {
+    const ids = new Set(bookRecoIds);
+    const list = (bookRecoIds.length ? books.filter(b => ids.has(b.id)) : books)
+      .filter(book => book.ownerId !== currentUser.id);
+    return list.slice(0, 8);
+  }, [bookRecoIds, books, currentUser.id]);
 
-  const recommendedCircles = readingCircles
-    .filter(circle => !currentUser.circlesjoined.includes(circle.id))
-    .slice(0, 6);
+  const recommendedCircles = useMemo(() => {
+    const ids = new Set(circleRecoIds);
+    const list = (circleRecoIds.length ? readingCircles.filter(c => ids.has(c.id)) : readingCircles)
+      .filter(circle => !currentUser.circlesjoined.includes(circle.id));
+    return list.slice(0, 6);
+  }, [circleRecoIds, readingCircles, currentUser.circlesjoined]);
 
   const trendingBooks = books
     .sort((a, b) => b.rating - a.rating)
@@ -44,8 +45,25 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ curren
     { key: 'trending', label: 'Trending', icon: TrendingUp },
   ];
 
-  const handleRequestBook = (bookId: string) => {
-    alert(`Request sent for book ${bookId}`);
+  const handleRequestBook = async (bookId: string) => {
+    if (!currentUser) return;
+    const book = books.find(b => b.id === bookId);
+    if (!book) return;
+    try {
+      const payload = {
+        requesterId: currentUser.id,
+        requesterName: currentUser.name,
+        ownerId: book.ownerId,
+        ownerName: book.ownerName,
+        bookId: book.id,
+        bookTitle: book.title,
+        message: `Hi ${book.ownerName}, I'm interested in trading for "${book.title}".`
+      };
+      const res = await api.post('trades', payload);
+      if (res.status === 201) alert('Trade request sent');
+    } catch (e) {
+      alert('Failed to send trade request');
+    }
   };
 
   const handleJoinCircle = async (circleId: string) => {
@@ -61,8 +79,27 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ curren
     }
   };
 
-  const handleRefreshRecommendations = () => {
-    alert('Refreshing recommendations...');
+  const handleRefreshRecommendations = async () => {
+    if (!currentUser) return;
+    try {
+      setLoading(true);
+      const [booksResp, circlesResp] = await Promise.all([
+        api.post('recommend/books', {
+          user: currentUser,
+          books
+        }),
+        api.post('recommend/circles', {
+          user: currentUser,
+          circles: readingCircles
+        })
+      ]);
+      setBookRecoIds(booksResp.data.bookIds || []);
+      setCircleRecoIds(circlesResp.data.circleIds || []);
+    } catch (e) {
+      alert('Failed to refresh recommendations');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,7 +116,7 @@ export const RecommendationsPage: React.FC<RecommendationsPageProps> = ({ curren
             className="mt-4 sm:mt-0 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center"
           >
             <RefreshCw className="w-5 h-5 mr-2" />
-            Refresh
+            {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
 
