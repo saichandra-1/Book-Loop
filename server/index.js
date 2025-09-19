@@ -197,12 +197,12 @@ app.post("/api/addbook", async (req, res) => {
   try {
     const { 
       title, author, genre, language, ownerId, ownerName, available, rating, reviews, 
-      description, cover, condition, location, price, isForSale 
+      description, cover, condition, location, price, isForSale, ownerContact 
     } = req.body;
     
     const newBook = new Book({ 
       title, author, genre, language, ownerId, ownerName, available, rating, reviews, 
-      description, cover, condition, location, price, isForSale 
+      description, cover, condition, location, price, isForSale, ownerContact 
     });
     await newBook.save();
     res.status(201).json(newBook);

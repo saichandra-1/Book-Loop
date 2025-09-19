@@ -27,9 +27,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }
 
   const userBooks = books.filter(book => book.ownerId === currentUser.id);
-  const userTrades = trades.filter(trade =>
-    trade.requesterId === currentUser.id || trade.ownerId === currentUser.id
-  );
+  const [tradeFilter, setTradeFilter] = useState<'all' | 'buying' | 'selling' | 'pending' | 'accepted' | 'declined' | 'completed'>('all');
+  const userTradesAll = trades.filter(trade => trade.requesterId === currentUser.id || trade.ownerId === currentUser.id);
+  const sortedTrades = [...userTradesAll].sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime());
+  const userTrades = sortedTrades.filter(t => {
+    if (tradeFilter === 'all') return true;
+    if (tradeFilter === 'buying') return t.requesterId === currentUser.id;
+    if (tradeFilter === 'selling') return t.ownerId === currentUser.id;
+    return t.status === tradeFilter;
+  });
   const userCircles = readingCircles.filter(circle =>
     currentUser.circlesjoined.includes(circle.id)
   );
@@ -235,7 +241,22 @@ const handleLeaveCircle = async (circleId: string) => {
 
             {activeTab === 'trades' && (
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-6">Trade History</h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">Trade History</h2>
+                  <select
+                    value={tradeFilter}
+                    onChange={(e) => setTradeFilter(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                  >
+                    <option value="all">All</option>
+                    <option value="buying">My Requests</option>
+                    <option value="selling">Requests To Me</option>
+                    <option value="pending">Pending</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="declined">Declined</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
                 <div className="space-y-4">
                   {userTrades.map((trade) => (
                     <div
@@ -267,7 +288,20 @@ const handleLeaveCircle = async (circleId: string) => {
                         <Calendar className="w-3 h-3 mr-1" />
                         {new Date(trade.requestDate).toLocaleDateString()}
                       </div>
-                      {trade.status === 'pending' && (
+                      {trade.status === 'accepted' && trade.requesterId === currentUser.id && (
+              <div className="flex space-x-2 mt-4">
+                <button
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleTradeAction(trade.id, 'completed');
+                  }}
+                >
+                  Confirm Completed
+                </button>
+              </div>
+            )}
+                      {trade.status === 'pending' && trade.ownerId === currentUser.id && (
               <div className="flex space-x-2 mt-4">
                 <button
                   className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"

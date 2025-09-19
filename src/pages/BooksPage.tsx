@@ -20,6 +20,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
   const [tradeContact, setTradeContact] = useState('');
   const [tradeLocation, setTradeLocation] = useState('');
   const [requestedBookIds, setRequestedBookIds] = useState<Set<string>>(new Set());
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set(currentUser?.favorites || []));
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const [availableGenres, setAvailableGenres] = useState<string[]>([]);
   const [availableLanguages, setAvailableLanguages] = useState<string[]>([]);
@@ -44,6 +46,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
     })();
     return () => { mounted = false; };
   }, [books]);
+
+  // Sync local favorites state if current user changes
+  useEffect(() => {
+    setFavoriteIds(new Set(currentUser?.favorites || []));
+  }, [currentUser]);
 
   useEffect(() => {
     let mounted = true;
@@ -72,7 +79,8 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
     const matchesGenre = selectedGenre === 'all' || book.genre === selectedGenre;
     const matchesCondition = selectedCondition === 'all' || book.condition === selectedCondition;
     const matchesLanguage = selectedLanguage === 'all' || book.language === selectedLanguage;
-    return matchesSearch && matchesGenre && matchesCondition && matchesLanguage;
+    const matchesFavorites = !showFavoritesOnly || favoriteIds.has(book.id);
+    return matchesSearch && matchesGenre && matchesCondition && matchesLanguage && matchesFavorites;
   });
 
   // Sort so that current user's books come first
@@ -117,17 +125,27 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
 
   const toggleFavorite = async (bookId: string) => {
     if (!currentUser) return;
+    const wasFav = favoriteIds.has(bookId);
+    // Optimistic UI update
+    setFavoriteIds(prev => {
+      const next = new Set(prev);
+      if (wasFav) next.delete(bookId); else next.add(bookId);
+      return next;
+    });
+
     try {
-      const isFav = (currentUser.favorites || []).includes(bookId);
-      if (isFav) {
+      if (wasFav) {
         await api.delete(`users/${currentUser.id}/favorites/${bookId}`);
-        currentUser.favorites = (currentUser.favorites || []).filter(id => id !== bookId);
       } else {
         await api.post(`users/${currentUser.id}/favorites/${bookId}`);
-        currentUser.favorites = [ ...(currentUser.favorites || []), bookId ];
       }
     } catch (e) {
-      // ignore UI errors for now
+      // Revert on failure
+      setFavoriteIds(prev => {
+        const next = new Set(prev);
+        if (wasFav) next.add(bookId); else next.delete(bookId);
+        return next;
+      });
     }
   };
 
@@ -202,6 +220,18 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
                   <option key={language} value={language}>{language}</option>
                 ))}
               </select>
+
+              {/* Favorites Only Toggle */}
+              <button
+                onClick={() => setShowFavoritesOnly(prev => !prev)}
+                className={`px-4 py-3 rounded-lg border transition-colors ${showFavoritesOnly ? 'bg-red-100 border-red-200 text-red-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                title="Show only favorite books"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'text-red-600 fill-current' : ''}`} />
+                  {showFavoritesOnly ? 'Favorites only' : 'All books'}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -243,6 +273,18 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
                     <option key={language} value={language}>{language}</option>
                   ))}
                 </select>
+
+                {/* Favorites Only Toggle - Mobile */}
+                <button
+                  onClick={() => setShowFavoritesOnly(prev => !prev)}
+                  className={`px-4 py-3 rounded-lg border transition-colors ${showFavoritesOnly ? 'bg-red-100 border-red-200 text-red-700' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                  title="Show only favorite books"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <Heart className={`w-4 h-4 ${showFavoritesOnly ? 'text-red-600 fill-current' : ''}`} />
+                    {showFavoritesOnly ? 'Favorites only' : 'All books'}
+                  </span>
+                </button>
               </div>
             </div>
           )}
@@ -280,7 +322,7 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
                 </div>
                 <div className="absolute top-3 right-3">
                   <button className="p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-colors" onClick={(e) => { e.stopPropagation(); toggleFavorite(book.id); }}>
-                    <Heart className={`w-4 h-4 ${currentUser?.favorites?.includes(book.id) ? 'text-red-500 fill-current' : 'text-gray-600'} transition-colors`} />
+                    <Heart className={`w-4 h-4 ${favoriteIds.has(book.id) ? 'text-red-500 fill-current' : 'text-gray-600'} transition-colors`} />
                   </button>
                 </div>
                 <div className="absolute bottom-3 right-3">
@@ -319,6 +361,11 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
                   <MapPin className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-600">{book.ownerName}</span>
                 </div>
+                {typeof (book as any).price === 'number' && (book as any).price !== null && (
+                  <div className="mb-2">
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">₹{(book as any).price}</span>
+                  </div>
+                )}
 
                 <p className="text-xs text-gray-500 mb-4 line-clamp-2">{book.description}</p>
 
@@ -397,12 +444,27 @@ export const BooksPage: React.FC<BooksPageProps> = ({ currentUser, books }) => {
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full mr-2">{selectedBook.genre}</span>
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{selectedBook.language}</span>
                 </div>
+                {(selectedBook as any).price !== undefined && (selectedBook as any).price !== null && (
+                  <div className="mb-2">
+                    <span className="font-medium">Price:</span> ₹{(selectedBook as any).price}
+                  </div>
+                )}
                 <div className="mb-2">
                   <span className="font-medium">Condition:</span> {selectedBook.condition.charAt(0).toUpperCase() + selectedBook.condition.slice(1)}
                 </div>
                 <div className="mb-2">
                   <span className="font-medium">Owner:</span> {selectedBook.ownerName}
                 </div>
+                {((selectedBook as any).location?.pincode || (selectedBook as any).location?.address) && (
+                  <div className="mb-2 text-sm text-gray-700">
+                    <span className="font-medium">Pickup Location:</span> {(selectedBook as any).location?.pincode || ''} {(selectedBook as any).location?.address ? `• ${(selectedBook as any).location.address}` : ''}
+                  </div>
+                )}
+                {(selectedBook as any).ownerContact && (
+                  <div className="mb-2 text-sm text-gray-700">
+                    <span className="font-medium">Seller Contact:</span> {(selectedBook as any).ownerContact}
+                  </div>
+                )}
                 <div className="mb-2">
                   <span className="font-medium">Availability:</span> {selectedBook.available ? 'Available' : 'Unavailable'}
                 </div>

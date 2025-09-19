@@ -56,13 +56,16 @@ const booksschema= new mongoose.Schema({
     city: { type: String, default: null },
     state: { type: String, default: null },
     country: { type: String, default: null },
+    pincode: { type: String, default: null },
+    address: { type: String, default: null },
     coordinates: {
       lat: { type: Number, default: null },
       lng: { type: Number, default: null }
     }
   },
   price: { type: Number, default: null }, // For selling books
-  isForSale: { type: Boolean, default: false }
+  isForSale: { type: Boolean, default: false },
+  ownerContact: { type: String, default: null }
 });
 
 const commentschema = new mongoose.Schema({
