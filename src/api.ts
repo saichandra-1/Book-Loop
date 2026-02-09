@@ -3,7 +3,7 @@ import axios, { AxiosInstance } from 'axios';
 // For Vite projects, use import.meta.env; for Create React App, process.env is available.
 // If using Vite:
 const api: AxiosInstance = axios.create({
-  baseURL: 'https://book-loop-serve-production-1108.up.railway.app:8080/api',
+  baseURL: 'https://book-loop-serve-production-1108.up.railway.app/api',
   headers: {
     'Content-Type': 'application/json',
   },
