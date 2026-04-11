@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BookOpen, Users, TrendingUp, Clock, Star, ArrowRight, ExternalLink } from 'lucide-react';
-import { User, Page,Book, ReadingCircle,Trade } from '../App';
+import { User, Page, Book, ReadingCircle, Trade } from '../App';
 import api from '../api';
 
 interface HomePageProps {
@@ -12,11 +12,11 @@ interface HomePageProps {
   setTrades: (trades: Trade[]) => void; // <-- add this
 }
 
-export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,books ,readingCircles ,trades, setTrades }) => {
+export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange, books, readingCircles, trades, setTrades }) => {
   const recentBooks = books.slice(0, 4);
   const popularCircles = readingCircles.slice(0, 3);
-  const pendingTrades = trades.filter(trade => 
-    (trade.requesterId === currentUser?.id || trade.ownerId === currentUser?.id) && 
+  const pendingTrades = trades.filter(trade =>
+    (trade.requesterId === currentUser?.id || trade.ownerId === currentUser?.id) &&
     trade.status === 'pending'
   ).slice(0, 3);
 
@@ -68,13 +68,13 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
               Join thousands of book lovers exchanging stories, sharing insights, and building meaningful connections through reading circles.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button 
+              <button
                 onClick={() => onPageChange('books')}
                 className="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
               >
                 Browse Books
               </button>
-              <button 
+              <button
                 onClick={() => onPageChange('circles')}
                 className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors"
               >
@@ -109,7 +109,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Pending Trades</h2>
               <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
-               onClick={() => onPageChange('profile')}>
+                onClick={() => onPageChange('profile')}>
                 View all <ArrowRight className="ml-1 w-4 h-4" />
               </button>
             </div>
@@ -124,25 +124,28 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-2">{trade.bookTitle}</h3>
                   <p className="text-gray-600 text-sm mb-4">
-                    {trade.requesterId === currentUser?.id 
-                      ? `Requested from ${trade.ownerName}`
+                    {trade.requesterId === currentUser?.id
+                      ? `Requested to ${trade.ownerName}`
                       : `Requested by ${trade.requesterName}`
                     }
                   </p>
-                  <div className="flex space-x-2">
-                    <button
-                      className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                      onClick={() => handleTradeAction(trade.id, 'accepted')}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                      onClick={() => handleTradeAction(trade.id, 'declined')}
-                    >
-                      Decline
-                    </button>
-                  </div>
+
+                  {trade.requesterId != currentUser?.id &&
+                    < div className="flex space-x-2">
+                      <button
+                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                        onClick={() => handleTradeAction(trade.id, 'accepted')}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                        onClick={() => handleTradeAction(trade.id, 'declined')}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  }
                 </div>
               ))}
             </div>
@@ -153,7 +156,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Recently Added Books</h2>
-            <button 
+            <button
               onClick={() => onPageChange('books')}
               className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
             >
@@ -170,11 +173,10 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
                     className="w-full h-48 object-cover rounded-t-xl"
                   />
                   <div className="absolute top-3 right-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      book.available 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${book.available
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-700'
+                      }`}>
                       {book.available ? 'Available' : 'Unavailable'}
                     </span>
                   </div>
@@ -192,13 +194,13 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
                     <span className="text-gray-300">•</span>
                     <span className="text-sm text-gray-600">{book.reviews} reviews</span>
                   </div>
-                    <button
-                      onClick={() => onPageChange('books')}
-                      className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                    >
-                      Request Exchange
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
+                  <button
+                    onClick={() => onPageChange('books')}
+                    className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Request Exchange
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -209,7 +211,7 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Popular Reading Circles</h2>
-            <button 
+            <button
               onClick={() => onPageChange('circles')}
               className="text-blue-600 hover:text-blue-700 font-medium flex items-center"
             >
@@ -233,11 +235,10 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
                       <p className="text-sm text-gray-600">{circle.memberCount} members</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    circle.privacy === 'public' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-blue-100 text-blue-700'
-                  }`}>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${circle.privacy === 'public'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-blue-100 text-blue-700'
+                    }`}>
                     {circle.privacy}
                   </span>
                 </div>
@@ -254,6 +255,6 @@ export const HomePage: React.FC<HomePageProps> = ({ currentUser, onPageChange ,b
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };

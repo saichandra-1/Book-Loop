@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Star, MapPin, Edit3, Settings, Heart, Calendar, Award, AlertCircle } from 'lucide-react';
-import { Book, User,ReadingCircle,Trade } from '../App';
+import { Book, User, ReadingCircle, Trade } from '../App';
 import { EditBook } from '../components/EditBook';
 import api from '../api';
 
@@ -17,7 +17,7 @@ interface ProfilePageProps {
 }
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({
-  currentUser, onEditProfile , books ,readingCircles ,trades , setShowAddBook , setBooks , setTrades, onPageChange
+  currentUser, onEditProfile, books, readingCircles, trades, setShowAddBook, setBooks, setTrades, onPageChange
 }) => {
   const [activeTab, setActiveTab] = useState<'books' | 'trades' | 'circles' | 'stats'>('books');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
@@ -28,7 +28,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   useEffect(() => {
     console.log('ProfilePage - Checking location for user:', currentUser?.id);
     console.log('ProfilePage - User location data:', currentUser?.location);
-    
+
     if (currentUser && (!currentUser.location?.coordinates || currentUser.location.coordinates.length === 0)) {
       console.log('ProfilePage - Setting location alert to true');
       setShowLocationAlert(true);
@@ -72,30 +72,30 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [showEditBook, setShowEditBook] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
 
-// Remove book handler
-const handleRemoveBook = async (bookId: string) => {
-  if (!window.confirm("Are you sure you want to remove this book?")) return;
-  await api.delete(`/books/${bookId}`);
-  setBooks(books.filter(b => b.id !== bookId)); // update state, no reload
-};
+  // Remove book handler
+  const handleRemoveBook = async (bookId: string) => {
+    if (!window.confirm("Are you sure you want to remove this book?")) return;
+    await api.delete(`/books/${bookId}`);
+    setBooks(books.filter(b => b.id !== bookId)); // update state, no reload
+  };
 
-// Leave circle handler
-const handleLeaveCircle = async (circleId: string) => {
-  if (!window.confirm("Are you sure you want to leave this circle?")) return;
-  try {
-    const res = await api.delete(`circles/${circleId}/leave`, {
-      data: { userId: currentUser.id },
-    });
-    if (res.status === 200) {
-      // Update the user's circlesjoined array
-      currentUser.circlesjoined = currentUser.circlesjoined.filter(id => id !== circleId);
-      alert(res.data.message);
+  // Leave circle handler
+  const handleLeaveCircle = async (circleId: string) => {
+    if (!window.confirm("Are you sure you want to leave this circle?")) return;
+    try {
+      const res = await api.delete(`circles/${circleId}/leave`, {
+        data: { userId: currentUser.id },
+      });
+      if (res.status === 200) {
+        // Update the user's circlesjoined array
+        currentUser.circlesjoined = currentUser.circlesjoined.filter(id => id !== circleId);
+        alert(res.data.message);
+      }
+    } catch (error) {
+      console.error('Error leaving circle:', error);
+      alert('Failed to leave circle');
     }
-  } catch (error) {
-    console.error('Error leaving circle:', error);
-    alert('Failed to leave circle');
-  }
-};
+  };
 
   // Accept/Decline trade handler
   const handleTradeAction = async (tradeId: string, action: 'accepted' | 'declined') => {
@@ -142,7 +142,7 @@ const handleLeaveCircle = async (circleId: string) => {
                   Location Required
                 </h3>
                 <p className="text-sm text-yellow-700 mt-1">
-                  To find nearby books and circles, please add your location to your profile. 
+                  To find nearby books and circles, please add your location to your profile.
                   This helps other users find you for book trades and local reading circles.
                 </p>
                 <div className="mt-3">
@@ -173,7 +173,7 @@ const handleLeaveCircle = async (circleId: string) => {
                   alt={currentUser.name}
                   className="w-32 h-32 rounded-full object-cover"
                 />
-                <button 
+                <button
                   onClick={onEditProfile}
                   className="absolute bottom-2 right-2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
                 >
@@ -181,13 +181,13 @@ const handleLeaveCircle = async (circleId: string) => {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1">
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 mb-2">{currentUser.name}</h1>
                   <p className="text-gray-600 mb-4">{currentUser.email}</p>
-                  
+
                   <div className="flex items-center space-x-2 mb-4">
                     <MapPin className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-600">
@@ -195,8 +195,8 @@ const handleLeaveCircle = async (circleId: string) => {
                     </span>
                   </div>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={onEditProfile}
                   className="flex items-center space-x-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
@@ -237,11 +237,10 @@ const handleLeaveCircle = async (circleId: string) => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`py-4 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.key
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                  className={`py-4 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.key
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }`}
                 >
                   {tab.label}
                   {tab.count !== null && (
@@ -260,13 +259,13 @@ const handleLeaveCircle = async (circleId: string) => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">My Books</h2>
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors" 
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                     onClick={() => setShowAddBook(true)}
                   >
                     + Add Book
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {userBooks.map((book) => (
                     <div key={book.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
@@ -283,19 +282,19 @@ const handleLeaveCircle = async (circleId: string) => {
                           <span className="text-sm text-gray-600">{book.rating}</span>
                         </div>
                         <div className="flex space-x-2">
-  <button
-    className="flex-1 text-xs bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
-    onClick={() => { setEditingBook(book); setShowEditBook(true); }}
-  >
-    Edit
-  </button>
-  <button
-    className="flex-1 text-xs bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 transition-colors"
-    onClick={() => handleRemoveBook(book.id)}
-  >
-    Remove
-  </button>
-</div>
+                          <button
+                            className="flex-1 text-xs bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-colors"
+                            onClick={() => { setEditingBook(book); setShowEditBook(true); }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="flex-1 text-xs bg-red-100 text-red-700 py-2 rounded-lg hover:bg-red-200 transition-colors"
+                            onClick={() => handleRemoveBook(book.id)}
+                          >
+                            Remove
+                          </button>
+                        </div>
 
                       </div>
                     </div>
@@ -318,18 +317,17 @@ const handleLeaveCircle = async (circleId: string) => {
                         <div>
                           <h3 className="font-semibold text-gray-900">{trade.bookTitle}</h3>
                           <p className="text-gray-600 text-sm">
-                            {trade.requesterId === currentUser.id 
-                              ? `Requested from ${trade.ownerName}`
+                            {trade.requesterId === currentUser.id
+                              ? `Requested to ${trade.ownerName}`
                               : `Requested by ${trade.requesterName}`
                             }
                           </p>
                         </div>
-                        <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                          trade.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        <span className={`px-3 py-1 text-sm font-medium rounded-full ${trade.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           trade.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                          trade.status === 'declined' ? 'bg-red-100 text-red-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
+                            trade.status === 'declined' ? 'bg-red-100 text-red-700' :
+                              'bg-blue-100 text-blue-700'
+                          }`}>
                           {trade.status.charAt(0).toUpperCase() + trade.status.slice(1)}
                         </span>
                       </div>
@@ -338,28 +336,28 @@ const handleLeaveCircle = async (circleId: string) => {
                         <Calendar className="w-3 h-3 mr-1" />
                         {new Date(trade.requestDate).toLocaleDateString()}
                       </div>
-                      {trade.status === 'pending' && (
-              <div className="flex space-x-2 mt-4">
-                <button
-                  className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleTradeAction(trade.id, 'accepted');
-                  }}
-                >
-                  Accept
-                </button>
-                <button
-                  className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleTradeAction(trade.id, 'declined');
-                  }}
-                >
-                  Decline
-                </button>
-              </div>
-            )}
+                      {trade.status === 'pending' && trade.requesterId !== currentUser?.id && (
+                        <div className="flex space-x-2 mt-4">
+                          <button
+                            className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleTradeAction(trade.id, 'accepted');
+                            }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            className="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleTradeAction(trade.id, 'declined');
+                            }}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -385,13 +383,13 @@ const handleLeaveCircle = async (circleId: string) => {
                       </div>
                       <p className="text-gray-600 text-sm mb-4">{circle.description}</p>
                       <div className="flex space-x-2">
-                        <button 
+                        <button
                           className="flex-1 bg-purple-100 text-purple-700 py-2 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors"
                           onClick={() => onPageChange?.('circle-discussion', circle.id)}
                         >
                           View Posts
                         </button>
-                        <button 
+                        <button
                           className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                           onClick={() => handleLeaveCircle(circle.id)}
                         >
@@ -478,65 +476,65 @@ const handleLeaveCircle = async (circleId: string) => {
           </div>
         </div>
       </div>
-{showEditBook && editingBook && (
-  <EditBook
-    book={editingBook}
-    onClose={() => setShowEditBook(false)}
-    onBookUpdated={(updatedBook) => {
-      setBooks(books.map(b => b.id === updatedBook.id ? updatedBook : b)); // update state, no reload
-      setShowEditBook(false);
-    }}
-  />
-)}
+      {showEditBook && editingBook && (
+        <EditBook
+          book={editingBook}
+          onClose={() => setShowEditBook(false)}
+          onBookUpdated={(updatedBook) => {
+            setBooks(books.map(b => b.id === updatedBook.id ? updatedBook : b)); // update state, no reload
+            setShowEditBook(false);
+          }}
+        />
+      )}
 
-{/* Trade Details Modal */}
-  {selectedTrade && (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-lg relative">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-          onClick={() => setSelectedTrade(null)}
-        >
-          ×
-        </button>
-        <h2 className="text-xl font-bold mb-4">Trade Details</h2>
-        <div className="mb-2">
-          <span className="font-medium">Book:</span> {selectedTrade.bookTitle}
-        </div>
-        <div className="mb-2">
-          <span className="font-medium">Requester:</span> {selectedTrade.requesterName}
-        </div>
-        <div className="mb-2">
-          <span className="font-medium">Owner:</span> {selectedTrade.ownerName}
-        </div>
-        {counterparty && (
-          <div className="mb-2">
-            <span className="font-medium">Contact:</span>
-            <div className="mt-1 text-sm text-gray-700">
-              {counterparty.phone && (
-                <div>
-                  <span className="font-medium">Phone:</span> {counterparty.phone}
+      {/* Trade Details Modal */}
+      {selectedTrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-lg relative">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              onClick={() => setSelectedTrade(null)}
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-4">Trade Details</h2>
+            <div className="mb-2">
+              <span className="font-medium">Book:</span> {selectedTrade.bookTitle}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Requester:</span> {selectedTrade.requesterName}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Owner:</span> {selectedTrade.ownerName}
+            </div>
+            {counterparty && (
+              <div className="mb-2">
+                <span className="font-medium">Contact:</span>
+                <div className="mt-1 text-sm text-gray-700">
+                  {counterparty.phone && (
+                    <div>
+                      <span className="font-medium">Phone:</span> {counterparty.phone}
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span>{counterparty.location?.address || 'Location not set'}</span>
+                  </div>
                 </div>
-              )}
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4 text-gray-400" />
-                <span>{counterparty.location?.address || 'Location not set'}</span>
               </div>
+            )}
+            <div className="mb-2">
+              <span className="font-medium">Status:</span> {selectedTrade.status}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Requested On:</span> {new Date(selectedTrade.requestDate).toLocaleString()}
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Message:</span> {selectedTrade.message}
             </div>
           </div>
-        )}
-        <div className="mb-2">
-          <span className="font-medium">Status:</span> {selectedTrade.status}
         </div>
-        <div className="mb-2">
-          <span className="font-medium">Requested On:</span> {new Date(selectedTrade.requestDate).toLocaleString()}
-        </div>
-        <div className="mb-2">
-          <span className="font-medium">Message:</span> {selectedTrade.message}
-        </div>
-      </div>
-    </div>
-  )}
+      )}
     </div>
   );
 };

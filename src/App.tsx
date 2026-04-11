@@ -13,7 +13,7 @@ import { AddBook } from './components/AddBook';
 import api from './api';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 
-export type Page = 'home' | 'books' | 'circles' | 'profile' | 'recommendations' | 'notifications' | 'circle-discussion'|'search';
+export type Page = 'home' | 'books' | 'circles' | 'profile' | 'recommendations' | 'notifications' | 'circle-discussion' | 'search';
 
 export interface User {
   id: string;
@@ -135,8 +135,8 @@ function App() {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       const userId = JSON.parse(savedUser);
-      const userdetails = async() => {
-        const user= await api.get('users/'+userId);
+      const userdetails = async () => {
+        const user = await api.get('users/' + userId);
         setCurrentUser({
           id: user.data.id,
           name: user.data.name,
@@ -154,26 +154,26 @@ function App() {
         });
       }
 
-      const booksdata = async() => {
-        const books= await api.get('books/');
+      const booksdata = async () => {
+        const books = await api.get('books/');
         setBooks(books.data);
       }
       booksdata();
 
-      const readingCirclesData = async() => {
-        const circles= await api.get('circles/');
+      const readingCirclesData = async () => {
+        const circles = await api.get('circles/');
         setReadingCircles(circles.data);
       }
       readingCirclesData();
 
-      const tradesdata = async() => {
-        const trades= await api.get('trades/user/'+userId);
+      const tradesdata = async () => {
+        const trades = await api.get('trades/user/' + userId);
         setTrades(trades.data);
       }
       tradesdata();
 
-      const notificationsdata = async() => {
-        const notifications= await api.get('notifications/', { params: { userId: userId } });
+      const notificationsdata = async () => {
+        const notifications = await api.get('notifications/', { params: { userId: userId } });
         setNotifications(notifications.data);
       }
       notificationsdata();
@@ -183,9 +183,9 @@ function App() {
     }
   }, []);
 
-  const handleLogin = async(email: string, password: string) => {
+  const handleLogin = async (email: string, password: string) => {
     // Mock login - in real app, this would call your backend API
-   const user= await api.get('users/login', { params: { email, password } });
+    const user = await api.get('users/login', { params: { email, password } });
     const exitinguser: User = {
       id: user.data.id,
       name: user.data.name,
@@ -204,13 +204,13 @@ function App() {
     setCurrentUser(exitinguser);
     setIsAuthenticated(true);
     localStorage.setItem('currentUser', JSON.stringify(exitinguser.id));
-    
+
     // Reload the page to trigger fresh data loading
     window.location.reload();
   };
 
   const handleSignup = async (name: string, email: string, password: string) => {
-    const user= await api.post('users/signup', { name, email, password });
+    const user = await api.post('users/signup', { name, email, password });
     const newUser: User = {
       id: user.data.id,
       name: user.data.name,
@@ -230,7 +230,7 @@ function App() {
     setCurrentUser(newUser);
     setIsAuthenticated(true);
     localStorage.setItem('currentUser', JSON.stringify(newUser.id));
-    
+
     // Reload the page to trigger fresh data loading
     window.location.reload();
   };
@@ -251,10 +251,10 @@ function App() {
   };
 
   const handlePageChange = (page: Page, circleId?: string) => {
-  setCurrentPage(page);
-  if (page !== 'search') setSearchQuery(null);
-  if (circleId) setSelectedCircleId(circleId);
-};
+    setCurrentPage(page);
+    if (page !== 'search') setSearchQuery(null);
+    if (circleId) setSelectedCircleId(circleId);
+  };
 
   const renderCurrentPage = () => {
     if (searchQuery) {
@@ -298,8 +298,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        currentPage={currentPage} 
+      <Header
+        currentPage={currentPage}
         onPageChange={handlePageChange}
         currentUser={currentUser}
         onLogout={handleLogout}
@@ -324,7 +324,7 @@ function App() {
       <main className="pt-16">
         {renderCurrentPage()}
       </main>
-      
+
       {showEditProfile && currentUser && (
         <EditProfileModal
           user={currentUser}
